@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>登录</title>
+</head>
+<script src="../static/lib/jsencrypt.min.js"></script>
+<script src="../static/lib/ajax.js"></script>
+<script src="../static/lib/crypto-js.js"></script>
+<script src="../static/lib/sm2.js"></script>
+
+<body>
+<div class="login-container">
+    <div style="flex: 1;display: flex;align-items: center;justify-content: flex-end;background: url('../static/img/login-bg.png') no-repeat 38% 50%;background-size: 1000px 510px;">
+        <div class="main">
+            <div class="main-top">
+                <h2 class="title">账号登录</h2>
+                <div style="padding: 0 0 0 55px">
+                    <form id="myform" name="loginForm" method="post" action="/v1/login">
+                        <div class="inp-out">
+                            <i class="inp-icon"></i>
+                            <input class="inp" id="username" type="text" name="username" placeholder="请输入账号"/>
+                        </div>
+                        <div class="inp-out">
+                            <i class="inp-icon inp-pas"></i>
+                            <input class="inp" id="password" type="password" name="password" placeholder="请输入密码"/>
+                        </div>
+                        <div class="inp-out inp-out-yzm">
+                            <i class="inp-icon inp-yzm"></i>
+                            <input class="inp" id="yzm" type="text" name="yzm" placeholder="请输入验证码"/>
+                            <div class="s-canvas" onclick="refreshCode()">
+                                <canvas id="s-canvas" width="90" height="40" style="border-radius: 5px;"></canvas>
+                            </div>
+                        </div>
+                        <div style="color: #4091F7;font-size: 12px;width: 350px;height: 40px;padding: 20px 0;">
+                            <label style="float: left;color: #999;">
+                                <input style="float: left;margin-top: 0;" type="checkbox" onclick="SavePassword()" name="savePassword" id="savePassword">
+                                记住密码
+                            </label>
+                            <span style="float: right;">忘记密码？</span>
+                        </div>
+
+                    </form>
+                    <button id="btn" class="btn" onclick="checkForm()">登 &nbsp;&nbsp; 录</button>
+                    <p id="error" style="color: red;font-size: 14px;display: none;"></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div style="height: 24%;background: #fff;">
+        <div style="width: 70%;margin: 0 auto;">
+            <div style="height: 40px;line-height: 40px; font-size: 14px;color: #235E8C;font-weight: bold; padding: 45px 0 20px 0;">
+                <span style="float: left;width: 300px;height: 40px; background: url('../static/img/logo.png') no-repeat left 10px;"></span>
+                <span style="float: right;">服务热线 <span style="padding: 8px 16px;border: 1px solid #dfdfdf;border-radius: 3px;margin-left: 10px;">400 820 5821</span></span>
+            </div>
+            <div style="border-bottom: 1px solid #dfdfdf;border-top: 1px solid #dfdfdf;height: 40px;line-height: 40px; font-size: 14px;color: #a4a4a4;">
+                <span style="float: left">Copyright ©普元信息技术股份有限公司版权所有</span>
+                <span style="float: right">沪ICP备12006232号-2</span>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+<!--
+<iframe name='hidden_frame' id="hidden_frame" style='display: none'></iframe>
+-->
+</body>
+<script>
+    var identifyCodes='0123456789';
+    var identifyCode='';
+    function yzm(str) {
+        this.identifyCode=str;
+        this.fontSizeMin=30;
+        this.fontSizeMax=36;
+        this.backgroundColorMin=240;
+        this.backgroundColorMax=250;
+        this.colorMin=50;
+        this.colorMax=160;
+        this.lineColorMin=40;
+        this.lineColorMax=180;
+        this.contentWidth=90;
+        this.contentHeight=40;
+
+        // 生成一个随机数
+        this.randomNum=function(min, max) {
+            return Math.floor(Math.random() * (max - min) + min)
+        }
+        // 生成一个随机的颜色
+        this.randomColor=function(min, max) {
+            var r = this.randomNum(min, max)
+            var g = this.randomNum(min, max)
+            var b = this.randomNum(min, max)
+            return 'rgb(' + r + ',' + g + ',' + b + ')'
+        }
+        this.drawPic=function() {
+            var canvas = getDom('s-canvas')
+            var ctx = canvas.getContext('2d')
+            ctx.textBaseline = 'bottom'
+            // 绘制背景
+            ctx.fillStyle = this.randomColor(this.backgroundColorMin, this.backgroundColorMax)
+            ctx.fillRect(0, 0, this.contentWidth, this.contentHeight)
+            // 绘制文字
+            for (var i = 0; i < this.identifyCode.length; i++) {
+                this.drawText(ctx, this.identifyCode[i], i)
+            }
+            this.drawLine(ctx)
+            this.drawDot(ctx)
+        }
+        this.drawText=function(ctx, txt, i) {
+            ctx.fillStyle = this.randomColor(this.colorMin, this.colorMax)
+            ctx.font = this.randomNum(this.fontSizeMin, this.fontSizeMax) + 'px 宋体 bold'
+            var x = (i + 1) * (this.contentWidth / (this.identifyCode.length + 2))
+            var y = this.randomNum(this.fontSizeMax, this.contentHeight + 5)
+            var deg = this.randomNum(-10, 10)
+            // 修改坐标原点和旋转角度
+            ctx.translate(x, y)
+            ctx.rotate(deg * Math.PI / 180)
+            ctx.fillText(txt, 0, 0)
+            // 恢复坐标原点和旋转角度
+            ctx.rotate(-deg * Math.PI / 180)
+            ctx.translate(-x, -y)
+        }
+        this.drawLine=function(ctx) {
+            // 绘制干扰线
+            for (var i = 0; i < 3; i++) {
+                ctx.strokeStyle = this.randomColor(this.lineColorMin, this.lineColorMax)
+                ctx.beginPath()
+                ctx.moveTo(this.randomNum(0, this.contentWidth), this.randomNum(0, this.contentHeight))
+                ctx.lineTo(this.randomNum(0, this.contentWidth), this.randomNum(0, this.contentHeight))
+                ctx.stroke()
+            }
+        }
+        this.drawDot=function(ctx) {
+            // 绘制干扰点
+            for (var i = 0; i < 20; i++) {
+                ctx.fillStyle = this.randomColor(0, 255)
+                ctx.beginPath()
+                ctx.arc(this.randomNum(0, this.contentWidth), this.randomNum(0, this.contentHeight), 1, 0, 2 * Math.PI)
+                ctx.fill()
+            }
+        }
+        this.drawPic();
+    }
+
+    function randomNum(min, max) {
+        return Math.floor(Math.random() * (max - min) + min);
+    }
+    function refreshCode() {
+        identifyCode = "";
+        makeCode(identifyCodes, 4);
+        var abc=new yzm(identifyCode);
+    }
+    function makeCode(o, l) {
+        for (var i = 0; i < l; i++) {
+            identifyCode += identifyCodes[
+                randomNum(0, identifyCodes.length)
+                ];
+        }
+
+        //console.log(this.identifyCode);
+    }
+    function SavePassword() {
+        if(getDom("savePassword").checked) {
+            var username = getDom("username").value;
+            var password = getDom("password").value;
+            window.localStorage.username =  username;
+            window.localStorage.password = password;
+            localStorage.rmbPassword = true;
+        } else {
+            localStorage.rmbPassword = false;
+            localStorage.clear()
+        }
+    }
+    function getDom(s) {
+        return document.getElementById(s)
+    }
+    function checkForm(){
+        getDom('btn').setAttribute("disabled", true)
+        SavePassword()
+        var that = getDom('password');
+        if(getDom("username").value==""){
+            getDom("error").innerHTML="请输入用户名";
+            getDom("error").style.display="";
+            getDom('btn').removeAttribute("disabled")
+            return false;
+        }else if(getDom("password").value==""){
+            getDom("error").innerHTML="请输入密码";
+            getDom("error").style.display="";
+            getDom('btn').removeAttribute("disabled")
+            return false;
+        }else if(getDom("yzm").value!=identifyCode){
+            getDom("error").innerHTML="请输入正确的验证码";
+            getDom("error").style.display="";
+            getDom('btn').removeAttribute("disabled")
+            return false;
+        }else {
+            getDom('myform').submit();
+            // ajax({
+            //     method : 'post',
+            //     url : '/v1/login',
+            //     data : {},
+            //     success : function (res) {
+            //         var obj = JSON.parse(res);
+            //         if(obj.type==='GM'){
+            //             that.value=sm2Encrypt(String(that.value), obj.data, 0)
+            //         }else {
+            //             //对密码进行加密
+            //             var encrypt = new JSEncrypt();
+            //             encrypt.setPublicKey(obj.data);
+            //             that.value=encrypt.encrypt(that.value);
+            //         }
+            //
+            //
+            //     },
+            //     async : true,
+            //     error:function (err) {
+            //         getDom('btn').removeAttribute("disabled")
+            //     }
+            // })
+
+        }
+    }
+    function getQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)", "i");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]);
+        return null;
+    }
+    window.onload=function () {
+        var str=getQueryString('error');
+        var lock=getQueryString('lock');
+        var disable=getQueryString('disable');
+        if(!!str){
+            getDom("error").innerHTML="用户名或密码错误";
+            getDom("error").style.display="";
+        }
+        if(!!lock){
+            getDom("error").innerHTML="用户输入密码错误次数超过5次，账号锁定30分钟！";
+            getDom("error").style.display="";
+        }
+        if(!!disable){
+            getDom("error").innerHTML="用户状态已禁用，禁止登录！";
+            getDom("error").style.display="";
+        }
+        if(localStorage.rmbPassword){
+            getDom("savePassword").checked=true;
+            getDom("username").value=localStorage.username;
+            getDom("password").value=localStorage.password
+        }else {
+            getDom("savePassword").checked=false;
+        }
+        refreshCode();
+
+        document.onkeydown=keyDownSearch;
+        function keyDownSearch(e) {
+            // 兼容FF和IE和Opera
+            var theEvent = e || window.event;
+            var code = theEvent.keyCode || theEvent.which || theEvent.charCode;
+            if (code == 13) {
+                checkForm();//具体处理函数
+                return false;
+            }
+            return true;
+        }
+    };
+
+</script>
+<style>
+    html{
+        width: 100%;
+        height: 100%;
+    }
+    body{
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #061C43;
+        background-size: cover;
+        -webkit-background-size: cover;
+        -o-background-size: cover;
+        background-position: center 0;
+    }
+    input{
+        border: none;
+        background: rgba(49, 61, 96, 0);
+        outline:none;
+    }
+    input:-webkit-autofill {
+        -webkit-box-shadow: 0 0 0 1000px transparent  inset !important;
+        -webkit-text-fill-color: #999 !important;
+        transition: background-color 50000s ease-in-out 0s;
+    }
+    .login-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .main {
+        margin-right: 14%;
+        width: 460px;
+        height: 480px;
+        line-height: 1;
+    }
+    .main-top{
+        width: 100%;
+        height: 100%;
+        background:#fff;
+        border-radius:4px;
+    }
+    .title{
+        height: 84px;
+        line-height: 84px;
+        font-size: 22px;
+        border-bottom: 1px solid #dfdfdf;
+        color: #444;
+        text-align: center;
+        margin: 0;
+    }
+    .inp-out{width: 350px;height: 40px;margin-top: 29px; display: flex;border-radius: 4px;overflow: hidden;border-bottom: 1px solid #dfdfdf;}
+    .inp{flex: 1;padding-left: 10px;font-size: 14px;color: #999;}
+    .inp-icon{margin: 12px 0 0 13px; width: 16px;height: 16px;background: url('../static/img/user.png') no-repeat;background-size: 90%;}
+    .inp-pas{background-image: url("../static/img/pas.png");}
+    .inp-yzm{background-image: url("../static/img/yzm.png");}
+    .main-bot{
+        width: 100%;
+        height: 40px;
+        background: rgba(64, 145, 247, 0.5);
+        box-shadow:0 -8px 10px 0 rgba(11,31,73,0.57);
+        border-radius:0 0 4px 4px;
+    }
+    .btn{
+        width: 350px;
+        height: 48px;
+        border: none;
+        border-radius: 24px;
+        background: rgba(64,145,247,1);
+        text-align: center;
+        font-size: 18px;
+        color: #fff;
+        cursor: pointer;
+        outline: none;
+    }
+    .btn:hover{
+        background: rgb(57, 123, 217);
+    }
+    .inp-out-yzm{
+        width: 262px;
+        position: relative;
+        overflow: visible;
+    }
+    .s-canvas{
+        position: absolute;
+        right: -95px;
+        cursor: pointer;
+    }
+    input::-webkit-input-placeholder{
+        color:#999;
+    }
+    input::-moz-placeholder{   /* Mozilla Firefox 19+ */
+        color:#999;
+    }
+    input:-moz-placeholder{    /* Mozilla Firefox 4 to 18 */
+        color:#999;
+    }
+    input:-ms-input-placeholder{  /* Internet Explorer 10-11 */
+        color:#999;
+    }
+</style>
+
+</html>
