@@ -26,7 +26,7 @@ func main() {
 	// 连接Redis
 	err = dao.InitRedis(setting.Conf.RedisConfig)
 	if err != nil {
-		fmt.Printf("init mysql failed, err:%v\n", err)
+		fmt.Printf("init redis failed, err:%v\n", err)
 		return
 	}
 	defer dao.RedisClose()
